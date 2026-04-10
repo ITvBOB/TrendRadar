@@ -1,42 +1,37 @@
-name: TrendRadar 自动抓取并生成 JSON
+name: 运行 TrendRadar 并生成最新 JSON
+
 on:
-  push:
-    branches: [ main ]
   schedule:
-    # 每 30 分钟运行一次，cron 是 UTC 时间
-    - cron: '*/30 * * * *'
-  workflow_dispatch: # 允许手动点击运行
+    - cron: '*/30 * * * *'  # 每30分钟更新一次
+  workflow_dispatch:        # 允许手动运行
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取代码
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 设置 Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: 安装依赖
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 运行 TrendRadar 生成数据
-        run: python main.py
-
-      - name: 生成专用公开 JSON（固定输出文件）
+      - name: Run TrendRadar
         run: |
-          # 把最新结果复制成固定文件名，用于公开访问
-          mkdir -p output
-          cp data.json output/latest-data.json
+          python main.py
 
-      - name: 提交并推送更新的 JSON
+      - name: 生成统一最新数据 latest.json
+        run: |
+          mkdir -pm 755 public
+          find . -name "*.json" -type f | head -1 | xargs -I {} cp {} public/latest.json
+
+      - name: Commit and push
         uses: EndBug/add-and-commit@v9
         with:
-          message: '自动更新最新数据 JSON'
-          add: 'output/latest-data.json'
-          committer_name: GitHub Actions
-          committer_email: actions@github.com
+          message: "Auto update latest.json"
+          add: "public/latest.json"
