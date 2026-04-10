@@ -1,0 +1,42 @@
+name: TrendRadar 自动抓取并生成 JSON
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # 每 30 分钟运行一次，cron 是 UTC 时间
+    - cron: '*/30 * * * *'
+  workflow_dispatch: # 允许手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 运行 TrendRadar 生成数据
+        run: python main.py
+
+      - name: 生成专用公开 JSON（固定输出文件）
+        run: |
+          # 把最新结果复制成固定文件名，用于公开访问
+          mkdir -p output
+          cp data.json output/latest-data.json
+
+      - name: 提交并推送更新的 JSON
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: '自动更新最新数据 JSON'
+          add: 'output/latest-data.json'
+          committer_name: GitHub Actions
+          committer_email: actions@github.com
